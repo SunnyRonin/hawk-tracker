@@ -143,7 +143,6 @@ export class BehaviorPlugin extends BasePlugin {
     this.behaviorStack.addCustomEvent('routeChange', {
       url: window.location.href,
       timestamp: Date.now(),
-      
     });
   }
 
