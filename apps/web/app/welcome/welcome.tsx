@@ -1,13 +1,70 @@
 
 import { Link } from 'react-router-dom';
-import logoDark from "./logo-dark.svg";
-import logoLight from "./logo-light.svg";
+import { Button } from "@workspace/ui/components/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { useDashboardMetrics } from "../components/dashboardPage/util";
 
 export function Welcome() {
+  // 通过 Hook 获取数据及状态
+  const { 
+    metrics, 
+    loading, 
+    error, 
+    refreshData, 
+    lastUpdate, 
+    isOnline, 
+    retryCount 
+  } = useDashboardMetrics();
+
+  // 格式化最后更新时间
+  const formatLastUpdate = (date: Date) => {
+    return date.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  // 获取趋势图标
+  const getTrendIcon = (trend?: 'up' | 'down' | 'stable') => {
+    switch (trend) {
+      case 'up':
+        return (
+          <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+          </svg>
+        );
+      case 'down':
+        return (
+          <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14" />
+          </svg>
+        );
+    }
+  };
+
+  // 获取趋势颜色
+  const getTrendColor = (trend?: 'up' | 'down' | 'stable') => {
+    switch (trend) {
+      case 'up':
+        return 'text-green-600';
+      case 'down':
+        return 'text-red-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
   return (
-    <main className="flex items-center justify-center pt-16 pb-4">
+    <main className="min-h-screen bg-gray-50">
       {/* 右上角的按钮组 */}
-      <div className="absolute top-4 right-4 flex items-center gap-3">
+      <div className="absolute top-6 right-6 flex items-center gap-3 z-10">
         {/* 项目管理按钮 */}
         <Link
           to="/projects"
@@ -91,86 +148,158 @@ export function Welcome() {
         </Link>
       </div>
 
-      <div className="flex-1 flex flex-col items-center gap-16 min-h-0">
-        <header className="flex flex-col items-center gap-9">
-          <div className="w-[500px] max-w-[100vw] p-4">
-            <img
-              src={logoLight}
-              alt="React Router"
-              className="block w-full dark:hidden"
-            />
-            <img
-              src={logoDark}
-              alt="React Router"
-              className="hidden w-full dark:block"
-            />
+      {/* DashboardPage 内容区域 - 扩大到整个页面 */}
+      <div className="w-full p-8 pt-16">
+        {/* 顶部操作栏 */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full animate-pulse ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-sm text-gray-600">
+                最后更新: {formatLastUpdate(lastUpdate)}
+              </span>
+            </div>
+            <span className="text-sm text-gray-500">|</span>
+            <span className="text-sm text-gray-500">数据每30秒自动刷新</span>
+            {!isOnline && (
+              <>
+                <span className="text-sm text-gray-500">|</span>
+                <span className="text-sm text-red-500">网络连接不可用</span>
+              </>
+            )}
+            {retryCount > 0 && (
+              <>
+                <span className="text-sm text-gray-500">|</span>
+                <span className="text-sm text-yellow-500">重试次数: {retryCount}/3</span>
+              </>
+            )}
           </div>
-        </header>
-        <div className="max-w-[300px] w-full space-y-6 px-4">
-          <nav className="rounded-3xl border border-gray-200 p-6 dark:border-gray-700 space-y-4">
-            <p className="leading-6 text-gray-700 dark:text-gray-200 text-center">
-              下一步是什么？
-            </p>
-            <ul>
-              {resources.map(({ href, text, icon }) => (
-                <li key={href}>
-                  <a
-                    className="group flex items-center gap-3 self-stretch p-3 leading-normal text-blue-700 hover:underline dark:text-blue-500"
-                    href={href}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {icon}
-                    {text}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          
+          <div className="flex items-center space-x-4">
+            {/* 刷新按钮，用于手动更新数据 */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={refreshData}
+              disabled={loading || !isOnline}
+              className="flex items-center space-x-2"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                  <span>加载中...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>刷新数据</span>
+                </>
+              )}
+            </Button>
+          </div>
         </div>
+
+        {/* 加载状态：数据请求过程中显示 */}
+        {loading && (
+          <div className="flex justify-center items-center h-64">
+            <div className="text-center">
+              <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-500">数据加载中，请稍候...</p>
+            </div>
+          </div>
+        )}
+
+        {/* 错误状态：请求失败时显示 */}
+        {error && (
+          <div className="flex justify-center items-center h-64">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-red-500 mb-4">{error}</p>
+              <Button variant="outline" onClick={refreshData} disabled={!isOnline}>
+                重试
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* 数据渲染：加载完成且无错误时显示卡片 */}
+        {!loading && !error && (
+          <div className="space-y-8">
+            {/* 数据概览卡片 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {metrics.map((card) => (
+                <Card key={card.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">{card.title}</CardTitle>
+                    <CardDescription className="text-sm">{card.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                        <p className="text-sm text-gray-500">{card.metric}</p>
+                        {/* 趋势显示 */}
+                        {card.trend && card.change && (
+                          <div className="flex items-center space-x-1 mt-1">
+                            {getTrendIcon(card.trend)}
+                            <span className={`text-xs ${getTrendColor(card.trend)}`}>
+                              {card.change}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="bg-blue-500 text-white p-3 rounded-full shadow-lg">
+                        <span className="text-lg font-bold">{card.badge}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* 实时数据状态提示 */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full animate-pulse ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm text-blue-700">
+                  实时数据监控已启用 - 页面访问量(PV)和独立访客数(UV)数据来自 Hawk Tracker 监控系统
+                  {!isOnline && ' - 当前处于离线状态'}
+                </span>
+              </div>
+            </div>
+
+            {/* 数据说明 */}
+            <div className="bg-gray-50 rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-4">数据说明</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                <div>
+                  <h4 className="font-medium text-gray-800 mb-2">PV (页面访问量)</h4>
+                  <p>统计用户访问页面的总次数，包括页面加载和路由变化事件</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-800 mb-2">UV (独立访客数)</h4>
+                  <p>统计访问网站的不同用户数量，基于用户唯一标识计算</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-800 mb-2">总事件数</h4>
+                  <p>所有监控事件的总数，包括错误、性能、行为等各类事件</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-800 mb-2">错误率</h4>
+                  <p>错误事件占总事件的百分比，反映系统稳定性</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
 }
 
-const resources = [
-  {
-    href: "https://reactrouter.com/docs",
-    text: "React Router 文档",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="20"
-        viewBox="0 0 20 20"
-        fill="none"
-        className="stroke-gray-600 group-hover:stroke-current dark:stroke-gray-300"
-      >
-        <path
-          d="M9.99981 10.0751V9.99992M17.4688 17.4688C15.889 19.0485 11.2645 16.9853 7.13958 12.8604C3.01467 8.73546 0.951405 4.11091 2.53116 2.53116C4.11091 0.951405 8.73546 3.01467 12.8604 7.13958C16.9853 11.2645 19.0485 15.889 17.4688 17.4688ZM2.53132 17.4688C0.951566 15.8891 3.01483 11.2645 7.13974 7.13963C11.2647 3.01471 15.8892 0.951453 17.469 2.53121C19.0487 4.11096 16.9854 8.73551 12.8605 12.8604C8.73562 16.9853 4.11107 19.0486 2.53132 17.4688Z"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
-  },
-  {
-    href: "https://rmx.as/discord",
-    text: "加入 Discord",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="20"
-        viewBox="0 0 24 20"
-        fill="none"
-        className="stroke-gray-600 group-hover:stroke-current dark:stroke-gray-300"
-      >
-        <path
-          d="M15.0686 1.25995L14.5477 1.17423L14.2913 1.63578C14.1754 1.84439 14.0545 2.08275 13.9422 2.31963C12.6461 2.16488 11.3406 2.16505 10.0445 2.32014C9.92822 2.08178 9.80478 1.84975 9.67412 1.62413L9.41449 1.17584L8.90333 1.25995C7.33547 1.51794 5.80717 1.99419 4.37748 2.66939L4.19 2.75793L4.07461 2.93019C1.23864 7.16437 0.46302 11.3053 0.838165 15.3924L0.868838 15.7266L1.13844 15.9264C2.81818 17.1714 4.68053 18.1233 6.68582 18.719L7.18892 18.8684L7.50166 18.4469C7.96179 17.8268 8.36504 17.1824 8.709 16.4944L8.71099 16.4904C10.8645 17.0471 13.128 17.0485 15.2821 16.4947C15.6261 17.1826 16.0293 17.8269 16.4892 18.4469L16.805 18.8725L17.3116 18.717C19.3056 18.105 21.1876 17.1751 22.8559 15.9238L23.1224 15.724L23.1528 15.3923C23.5873 10.6524 22.3579 6.53306 19.8947 2.90714L19.7759 2.73227L19.5833 2.64518C18.1437 1.99439 16.6386 1.51826 15.0686 1.25995ZM16.6074 10.7755L16.6074 10.7756C16.5934 11.6409 16.0212 12.1444 15.4783 12.1444C14.9297 12.1444 14.3493 11.6173 14.3493 10.7877C14.3493 9.94885 14.9378 9.41192 15.4783 9.41192C16.0471 9.41192 16.6209 9.93851 16.6074 10.7755ZM8.49373 12.1444C7.94513 12.1444 7.36471 11.6173 7.36471 10.7877C7.36471 9.94885 7.95323 9.41192 8.49373 9.41192C9.06038 9.41192 9.63892 9.93712 9.6417 10.7815C9.62517 11.6239 9.05462 12.1444 8.49373 12.1444Z"
-          strokeWidth="1.5"
-        />
-      </svg>
-    ),
-  },
-];

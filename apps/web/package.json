@@ -17,13 +17,15 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router": "^7.7.1",
-    "react-router-dom": "^7.8.1"
+    "react-router-dom": "^7.8.1",
+    "rrweb": "^2.0.0-alpha.13"
   },
   "devDependencies": {
     "@hawk-tracker/core": "workspace:*",
     "@hawk-tracker/plugin-error": "workspace:*",
     "@hawk-tracker/plugin-performance": "workspace:*",
     "@hawk-tracker/plugin-behavior": "workspace:*",
+    "@hawk-tracker/plugin-rrweb": "workspace:*",
     "@react-router/dev": "^7.8.0",
     "@types/node": "^20",
     "@types/react": "^19.1.2",

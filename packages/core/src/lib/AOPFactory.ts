@@ -61,7 +61,23 @@ function createEventListener(
 ): void {
   if (!target || !('addEventListener' in target)) return;
 
-  // const handler = function (event: Event) {
+  // 根据配置对 CLICK 事件做可配置节流
+  let emitFn = (payload: any) => eventCenter.emit(type, payload);
+  if (type === LISTEN_TYPES.CLICK) {
+    const cfg = getConfig();
+    const delay = cfg?.behavior?.click?.throttle ?? 100;
+    if (typeof delay === 'number' && delay > 0) {
+      const throttled = throttle(
+        (payload: any) => {
+          eventCenter.emit(type, payload);
+        },
+        delay,
+        true,
+      );
+      emitFn = throttled as any;
+    }
+  }
+
   const handler = function (event: Event) {
     // 特殊处理点击事件
     if (type === LISTEN_TYPES.CLICK) {
@@ -124,6 +140,30 @@ function createEventListener(
         elementId: trackingElement.id || undefined,
       };
 
+      // 可选：附加更多元素信息（受 captureElementInfo / maxElementTextLength 控制）
+      if (clickConfig?.captureElementInfo) {
+        const maxLen = Math.max(0, clickConfig?.maxElementTextLength ?? 100);
+        const text = (trackingElement.textContent || '').trim();
+        const textSnippet = text.length > maxLen ? text.slice(0, maxLen) : text;
+        const rect = trackingElement.getBoundingClientRect?.();
+        (enhancedEvent as any).elementInfo = {
+          tag: trackingElement.tagName,
+          classList:
+            typeof trackingElement.className === 'string'
+              ? trackingElement.className
+              : Array.from((trackingElement.classList || []) as any).join(' '),
+          textSnippet,
+          boundingRect: rect
+            ? {
+                width: rect.width,
+                height: rect.height,
+                left: rect.left,
+                top: rect.top,
+              }
+            : undefined,
+        };
+      }
+
       // 执行beforeSend钩子
       let finalEvent = enhancedEvent;
       if (clickConfig?.beforeSend) {
@@ -134,8 +174,17 @@ function createEventListener(
         finalEvent = result;
       }
 
-      // 发送增强的事件数据
-      eventCenter.emit(type, finalEvent);
+      // 发送增强的事件数据（支持节流）
+      emitFn(finalEvent);
+
+      // afterSend 回调（尽力而为，视为发送成功回调）
+      try {
+        if (clickConfig?.afterSend) {
+          clickConfig.afterSend(true, finalEvent);
+        }
+      } catch (e) {
+        debug.logDebug('afterSend callback error', e);
+      }
     } else {
       // 其他事件类型的默认处理
       eventCenter.emit(type, event);
@@ -227,13 +276,8 @@ const listenerRegistry: Record<LISTEN_TYPES, () => void> = {
 
   [LISTEN_TYPES.CLICK]: () => {
     if (!hasGlobalProperty('document')) return;
-    createThrottledEventListener(
-      LISTEN_TYPES.CLICK,
-      'click',
-      100,
-      _global.document,
-      true,
-    );
+    // 使用增强型监听器，并在内部读取 throttle 配置
+    createEventListener(LISTEN_TYPES.CLICK, 'click', _global.document, true);
   },
 
   [LISTEN_TYPES.LOAD]: () => {

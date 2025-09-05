@@ -58,7 +58,7 @@ export const EVENT_TYPES = {
   PV: 'pv',
   UV: 'uv',
   FETCH: 'fetch',
-  XHR: 'xhr'
+  XHR: 'xhr',
 } as const;
 
 // 时间范围常量
@@ -66,7 +66,7 @@ export const TIME_RANGES = {
   ONE_HOUR: '1h',
   SIX_HOURS: '6h',
   ONE_DAY: '24h',
-  ONE_WEEK: '7d'
+  ONE_WEEK: '7d',
 } as const;
 
 // 事件类型图标映射
@@ -81,7 +81,7 @@ export const EVENT_TYPE_ICONS: Record<string, string> = {
   input: '⌨️',
   route: '🔄',
   performance: '⚡',
-  error: '❌'
+  error: '❌',
 };
 
 // 事件类型颜色映射
@@ -96,7 +96,7 @@ export const EVENT_TYPE_COLORS: Record<string, string> = {
   input: 'bg-yellow-100 text-yellow-800',
   route: 'bg-purple-100 text-purple-800',
   performance: 'bg-orange-100 text-orange-800',
-  error: 'bg-red-100 text-red-800'
+  error: 'bg-red-100 text-red-800',
 };
 
 // 事件类型名称映射
@@ -111,19 +111,19 @@ export const EVENT_TYPE_NAMES: Record<string, string> = {
   input: '输入事件',
   route: '路由事件',
   performance: '性能事件',
-  error: '错误事件'
+  error: '错误事件',
 };
 
 // 用户活跃度级别
 export const USER_ACTIVITY_LEVELS = {
-  HIGH: 'high',      // ≥5个事件
+  HIGH: 'high', // ≥5个事件
   MODERATE: 'moderate', // 2-4个事件
-  LOW: 'low'         // <2个事件
+  LOW: 'low', // <2个事件
 } as const;
 
 // 会话时长级别
 export const SESSION_DURATION_LEVELS = {
-  SHORT: 'short',    // ≤5分钟
-  MEDIUM: 'medium',  // 5-15分钟
-  LONG: 'long'       // >15分钟
+  SHORT: 'short', // ≤5分钟
+  MEDIUM: 'medium', // 5-15分钟
+  LONG: 'long', // >15分钟
 } as const;

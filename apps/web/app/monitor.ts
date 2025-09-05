@@ -2,6 +2,7 @@ import { init } from '@hawk-tracker/core';
 import { ErrorPlugin } from '@hawk-tracker/plugin-error';
 import { PerformancePlugin } from '@hawk-tracker/plugin-performance';
 import { BehaviorPlugin } from '@hawk-tracker/plugin-behavior';
+import { RrwebPlugin } from '@hawk-tracker/plugin-rrweb';
 
 // 监控配置 - 基于你的SDK实际配置结构
 const monitorConfig = {
@@ -163,9 +164,26 @@ export function initMonitor() {
       enableClick: true,
     });
 
+    // 加载rrweb录频插件
+    monitorInstance.use(RrwebPlugin, {
+      preset: 'balanced', // 平衡模式：性能和质量平衡
+      maxEvents: 500, // 最大录制事件数
+      emit: (event: any) => {
+        // 可以在这里处理录制事件，比如发送到后端
+        if (monitorConfig.debug) {
+          console.log('🎥 rrweb录制事件:', event.type, event);
+        }
+      },
+      recordOptions: {
+        recordCanvas: true, // 录制画布
+        collectFonts: true, // 收集字体信息
+        maskAllInputs: false, // 不遮挡输入框（平衡隐私和功能）
+      },
+    });
+
     console.log('✅ Hawk Tracker 监控初始化成功');
     console.log(
-      '📦 已加载插件: ErrorPlugin, PerformancePlugin, BehaviorPlugin',
+      '📦 已加载插件: ErrorPlugin, PerformancePlugin, BehaviorPlugin, RrwebPlugin',
     );
 
     return monitorInstance;

@@ -1,6 +1,11 @@
 // 用户行为监控工具函数 - 真实 SDK 集成版本
 
-import { getMonitor, getBehaviors, addBehavior, trackEvent } from '../../../../../monitor';
+import {
+  getMonitor,
+  getBehaviors,
+  addBehavior,
+  trackEvent,
+} from '../../../../../monitor';
 import { BehaviorEvent, BehaviorData } from './types';
 
 // 检查监控实例是否可用
@@ -26,33 +31,35 @@ export function getMonitorStatus(): {
       return {
         available: false,
         initialized: false,
-        plugins: []
+        plugins: [],
       };
     }
 
     return {
       available: true,
       initialized: true,
-      plugins: ['BehaviorPlugin', 'ErrorPlugin', 'PerformancePlugin']
+      plugins: ['BehaviorPlugin', 'ErrorPlugin', 'PerformancePlugin'],
     };
   } catch (error) {
     console.error('获取监控状态失败:', error);
     return {
       available: false,
       initialized: false,
-      plugins: []
+      plugins: [],
     };
   }
 }
 
 // 从 SDK 获取行为数据快照
-export async function getBehaviorSnapshot(options: {
-  maxCount?: number;
-  includeTypes?: string[];
-  excludeTypes?: string[];
-  startTime?: number;
-  endTime?: number;
-} = {}): Promise<BehaviorEvent[]> {
+export async function getBehaviorSnapshot(
+  options: {
+    maxCount?: number;
+    includeTypes?: string[];
+    excludeTypes?: string[];
+    startTime?: number;
+    endTime?: number;
+  } = {},
+): Promise<BehaviorEvent[]> {
   try {
     const monitor = getMonitor();
     if (!monitor) {
@@ -65,7 +72,7 @@ export async function getBehaviorSnapshot(options: {
       includeTypes: options.includeTypes,
       excludeTypes: options.excludeTypes,
       startTime: options.startTime,
-      endTime: options.endTime
+      endTime: options.endTime,
     });
 
     // 转换为标准格式
@@ -73,10 +80,12 @@ export async function getBehaviorSnapshot(options: {
       id: behavior.id || `behavior-${index}`,
       type: behavior.type || 'unknown',
       timestamp: behavior.timestamp || Date.now(),
-      pageUrl: behavior.pageUrl || (typeof window !== 'undefined' ? window.location.href : ''),
+      pageUrl:
+        behavior.pageUrl ||
+        (typeof window !== 'undefined' ? window.location.href : ''),
       userId: behavior.userId || 'unknown',
       sessionId: behavior.sessionId || 'unknown',
-      context: behavior.context || {}
+      context: behavior.context || {},
     }));
   } catch (error) {
     console.error('获取行为快照失败:', error);
@@ -87,7 +96,7 @@ export async function getBehaviorSnapshot(options: {
 // 手动添加行为事件到 SDK
 export function addBehaviorEvent(
   eventType: string,
-  context: Record<string, any> = {}
+  context: Record<string, any> = {},
 ): boolean {
   try {
     if (!isMonitorAvailable()) {
@@ -100,7 +109,7 @@ export function addBehaviorEvent(
       timestamp: Date.now(),
       pageUrl: typeof window !== 'undefined' ? window.location.href : '',
       sdkVersion: '1.0.0',
-      source: 'manual'
+      source: 'manual',
     });
 
     if (success) {
@@ -117,13 +126,15 @@ export function addBehaviorEvent(
 }
 
 // 批量添加行为事件
-export function addBatchBehaviorEvents(events: Array<{
-  type: string;
-  context?: Record<string, any>;
-}>): number {
+export function addBatchBehaviorEvents(
+  events: Array<{
+    type: string;
+    context?: Record<string, any>;
+  }>,
+): number {
   let successCount = 0;
 
-  events.forEach(event => {
+  events.forEach((event) => {
     if (addBehaviorEvent(event.type, event.context)) {
       successCount++;
     }
@@ -145,25 +156,27 @@ export function getBehaviorStats(events: BehaviorEvent[]): {
     const timeDistribution: Record<string, number> = {};
     const userDistribution: Record<string, number> = {};
 
-    events.forEach(event => {
+    events.forEach((event) => {
       // 事件类型统计
       eventTypeCounts[event.type] = (eventTypeCounts[event.type] || 0) + 1;
 
       // 时间分布统计（按小时）
       if (typeof window !== 'undefined') {
         const hour = new Date(event.timestamp).getHours();
-        timeDistribution[hour.toString()] = (timeDistribution[hour.toString()] || 0) + 1;
+        timeDistribution[hour.toString()] =
+          (timeDistribution[hour.toString()] || 0) + 1;
       }
 
       // 用户分布统计
-      userDistribution[event.userId] = (userDistribution[event.userId] || 0) + 1;
+      userDistribution[event.userId] =
+        (userDistribution[event.userId] || 0) + 1;
     });
 
     return {
       totalEvents: events.length,
       eventTypeCounts,
       timeDistribution,
-      userDistribution
+      userDistribution,
     };
   } catch (error) {
     console.error('计算行为统计信息失败:', error);
@@ -171,7 +184,7 @@ export function getBehaviorStats(events: BehaviorEvent[]): {
       totalEvents: 0,
       eventTypeCounts: {},
       timeDistribution: {},
-      userDistribution: {}
+      userDistribution: {},
     };
   }
 }
@@ -187,7 +200,7 @@ export function formatTimestamp(timestamp: number): string {
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit'
+        second: '2-digit',
       });
     }
     return new Date(timestamp).toISOString();
@@ -198,7 +211,10 @@ export function formatTimestamp(timestamp: number): string {
 }
 
 // 计算时间差（毫秒）
-export function getTimeDifference(timestamp1: number, timestamp2: number): number {
+export function getTimeDifference(
+  timestamp1: number,
+  timestamp2: number,
+): number {
   return Math.abs(timestamp2 - timestamp1);
 }
 
@@ -244,10 +260,10 @@ export function filterBehaviorEvents(
     userIds?: string[];
     timeRange?: { start: number; end: number };
     searchText?: string;
-  }
+  },
 ): BehaviorEvent[] {
   try {
-    return events.filter(event => {
+    return events.filter((event) => {
       // 类型过滤
       if (filters.types && filters.types.length > 0) {
         if (!filters.types.includes(event.type)) {
@@ -264,7 +280,10 @@ export function filterBehaviorEvents(
 
       // 时间范围过滤
       if (filters.timeRange) {
-        if (event.timestamp < filters.timeRange.start || event.timestamp > filters.timeRange.end) {
+        if (
+          event.timestamp < filters.timeRange.start ||
+          event.timestamp > filters.timeRange.end
+        ) {
           return false;
         }
       }
@@ -276,8 +295,10 @@ export function filterBehaviorEvents(
           event.type,
           event.userId,
           event.pageUrl,
-          JSON.stringify(event.context)
-        ].join(' ').toLowerCase();
+          JSON.stringify(event.context),
+        ]
+          .join(' ')
+          .toLowerCase();
 
         if (!searchableText.includes(searchLower)) {
           return false;

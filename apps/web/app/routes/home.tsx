@@ -2,7 +2,6 @@ import type { Route } from "./+types/home";
 import { Welcome } from "../welcome/welcome";
 import { useAuth } from "../contexts/AuthContext";
 import { ProtectedRoute } from "../components/ProtectedRoute";
-import DashboardPage from "@/components/dashboardPage/DashboardPage";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -28,7 +27,7 @@ function HomeContent() {
               <h1 className="text-2xl font-bold text-blue-900">Hawk Tracker</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-gray-700">欢迎，{user?.name || user?.email}</span>
+              <span className="text-gray-700 mr-8">欢迎，{user?.name || user?.email}</span>
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200"
@@ -39,7 +38,9 @@ function HomeContent() {
           </div>
         </div>
       </nav>
-
+      {/* <div>
+        <DashboardPage />
+      </div> */}
       <Welcome />
     </div>
   );
@@ -49,6 +50,7 @@ export default function Home() {
   return (
     <ProtectedRoute>
       <HomeContent />
+   
     </ProtectedRoute>
   );
 }

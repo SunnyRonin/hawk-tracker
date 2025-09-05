@@ -10,7 +10,7 @@ import {
  * 使用核心级别的行为栈管理器来记录用户行为
  */
 export class BehaviorPlugin extends BasePlugin {
-  private behaviorStack!: BehaviorStack;
+  private behaviorStack: BehaviorStack = null as any;
   private globalTracker: any;
   private clickEnabled: boolean = true;
 
@@ -66,7 +66,8 @@ export class BehaviorPlugin extends BasePlugin {
     if (this.clickEnabled) {
       core.eventCenter.subscribeEvent({
         type: LISTEN_TYPES.CLICK,
-        callback: this.handleClickEvent.bind(this),
+        // 消费核心增强后的 ClickEvent（带 eventId、title、params 等字段）
+        callback: (evt: any) => this.handleClickEvent(evt),
       });
       console.log('[BehaviorPlugin] 点击事件监控已启用');
     } else {
@@ -110,225 +111,96 @@ export class BehaviorPlugin extends BasePlugin {
     });
 
     core.eventCenter.subscribeEvent({
-      type: LISTEN_TYPES.FETCH,
+      type: LISTEN_TYPES.XHRSEND,
       callback: this.handleNetworkEvent.bind(this),
     });
 
     core.eventCenter.subscribeEvent({
-      type: LISTEN_TYPES.ONLINE,
-      callback: this.handleNetworkStatusEvent.bind(this),
+      type: LISTEN_TYPES.FETCH,
+      callback: this.handleNetworkEvent.bind(this),
     });
 
-    core.eventCenter.subscribeEvent({
-      type: LISTEN_TYPES.OFFLINE,
-      callback: this.handleNetworkStatusEvent.bind(this),
-    });
+    // 移除重复的 CLICK 订阅，避免重复记录
 
     console.log('[BehaviorPlugin] 事件订阅完成');
   }
 
-  /**
-   * 处理点击事件
-   */
-  private handleClickEvent(event: MouseEvent) {
-    if (!this.clickEnabled) return;
-
-    const target = event.target as HTMLElement;
-    if (!target) return;
-
-    const elementInfo = this.getElementInfo(target);
-
-    this.behaviorStack.addEvent({
-      type: LISTEN_TYPES.CLICK,
-      pageUrl: window.location.href,
-      context: {
-        element: elementInfo,
-        customData: {
-          position: {
-            x: event.clientX,
-            y: event.clientY,
-          },
-        },
-      },
-    });
-  }
-
-  /**
-   * 处理页面加载事件
-   */
   private handlePageLoadEvent() {
-    this.behaviorStack.addEvent({
-      type: LISTEN_TYPES.LOAD,
-      pageUrl: window.location.href,
-      context: {
-        page: {
-          title: document.title,
-          loadTime: performance.now(),
-        },
-        screen: {
-          width: screen.width,
-          height: screen.height,
-          availWidth: screen.availWidth,
-          availHeight: screen.availHeight,
-        },
-        viewport: {
-          width: window.innerWidth,
-          height: window.innerHeight,
-        },
-        userAgent: navigator.userAgent,
-      },
+    this.behaviorStack.addCustomEvent('pageLoad', {
+      url: window.location.href,
+      timestamp: Date.now(),
     });
   }
 
-  /**
-   * 处理页面卸载事件
-   */
   private handlePageUnloadEvent() {
-    this.behaviorStack.addEvent({
-      type: LISTEN_TYPES.BEFOREUNLOAD,
-      pageUrl: window.location.href,
-      context: {
-        page: {
-          title: document.title,
-        },
-      },
+    this.behaviorStack.addCustomEvent('pageUnload', {
+      url: window.location.href,
+      timestamp: Date.now(),
     });
   }
 
-  /**
-   * 处理路由变化事件
-   */
-  private handleRouteChangeEvent(event: any) {
-    const from = this.getCurrentUrl();
-    const to = window.location.href;
-
-    this.behaviorStack.addEvent({
-      type: event.type || 'route_change',
-      pageUrl: to,
-      context: {
-        route: {
-          type: this.getRouteChangeType(event),
-          from,
-          to,
-        },
-      },
+  private handleRouteChangeEvent() {
+    this.behaviorStack.addCustomEvent('routeChange', {
+      url: window.location.href,
+      timestamp: Date.now(),
+      
     });
   }
 
-  /**
-   * 处理网络请求事件
-   */
-  private handleNetworkEvent(event: any) {
-    const url = event.url || event.target?.responseURL || 'unknown';
+  private handleNetworkEvent(data: any) {
+    this.behaviorStack.addCustomEvent('networkEvent', data);
+  }
 
-    this.behaviorStack.addEvent({
-      type: event.type || 'network_request',
-      pageUrl: window.location.href,
-      context: {
-        network: {
-          url: event.url || event.target?.responseURL || 'unknown',
-          method: event.method || event.target?._method || 'GET',
-          status: event.status || event.target?.status,
-          statusText: event.statusText || event.target?.statusText,
-        },
-      },
+  private handleClickEvent(event: any) {
+    // 兼容核心增强后的 ClickEvent；若是原生 MouseEvent 则回退到最小字段
+    const isEnhanced = event && typeof event === 'object' && 'eventId' in event;
+    if (isEnhanced) {
+      this.behaviorStack.addCustomEvent('click', {
+        eventId: event.eventId,
+        title: event.title,
+        params: event.params,
+        elementPath: event.elementPath,
+        x: event.x,
+        y: event.y,
+        elementId: event.elementId,
+        triggerPageUrl: event.triggerPageUrl,
+        triggerTime: event.triggerTime,
+      });
+      return;
+    }
+
+    // 回退：尽力从原生事件提取基础信息
+    const mouse = event as MouseEvent;
+    const target = mouse?.target as HTMLElement;
+    if (!mouse || !target) return;
+    const rect = target.getBoundingClientRect();
+    this.behaviorStack.addCustomEvent('click', {
+      elementPath: this.getElementPath(target),
+      x: mouse.clientX,
+      y: mouse.clientY,
+      width: rect.width,
+      height: rect.height,
+      triggerPageUrl: window.location.href,
+      triggerTime: Date.now(),
     });
   }
 
-  /**
-   * 处理网络状态事件
-   */
-  private handleNetworkStatusEvent(event: Event) {
-    this.behaviorStack.addEvent({
-      type: event.type,
-      pageUrl: window.location.href,
-      context: {
-        network: {
-          url: window.location.href,
-          status: navigator.onLine ? 200 : 0,
-          statusText: navigator.onLine ? 'online' : 'offline',
-        },
-      },
-    });
-  }
+  private getElementPath(element: HTMLElement): string {
+    const path: string[] = [];
+    let current: HTMLElement | null = element;
 
-  /**
-   * 获取元素信息
-   */
-  private getElementInfo(element: HTMLElement) {
-    return {
-      tagName: element.tagName.toLowerCase(),
-      id: element.id || undefined,
-      className: element.className || undefined,
-      textContent: element.textContent?.slice(0, 100) || undefined,
-      size: {
-        width: element.offsetWidth,
-        height: element.offsetHeight,
-      },
-    };
-  }
+    while (current) {
+      let selector = current.tagName.toLowerCase();
+      if (current.id) {
+        selector += `#${current.id}`;
+      } else if (current.className) {
+        selector += `.${current.className.split(' ').join('.')}`;
+      }
 
-  /**
-   * 获取当前URL
-   */
-  private getCurrentUrl(): string {
-    return window.location.href;
-  }
+      path.unshift(selector);
+      current = current.parentElement;
+    }
 
-  /**
-   * 获取路由变化类型
-   */
-  private getRouteChangeType(
-    event: any,
-  ): 'pushState' | 'replaceState' | 'popstate' | 'hashchange' {
-    if (event.type === 'pushState') return 'pushState';
-    if (event.type === 'replaceState') return 'replaceState';
-    if (event.type === 'popstate') return 'popstate';
-    if (event.type === 'hashchange') return 'hashchange';
-    return 'pushState';
-  }
-
-  /**
-   * 启用点击事件监控
-   */
-  public enableClickTracking(): void {
-    this.clickEnabled = true;
-    console.log('[BehaviorPlugin] 点击事件监控已启用');
-  }
-
-  /**
-   * 禁用点击事件监控
-   */
-  public disableClickTracking(): void {
-    this.clickEnabled = false;
-    console.log('[BehaviorPlugin] 点击事件监控已禁用');
-  }
-
-  /**
-   * 检查点击事件监控状态
-   */
-  public isClickTrackingEnabled(): boolean {
-    return this.clickEnabled;
-  }
-
-  /**
-   * 获取行为栈快照
-   */
-  public getBehaviorSnapshot(options?: any): any[] {
-    return this.behaviorStack.getSnapshot(options);
-  }
-
-  /**
-   * 获取行为栈统计信息
-   */
-  public getBehaviorStats(): any {
-    return this.behaviorStack.getStats();
-  }
-
-  /**
-   * 添加自定义行为事件
-   */
-  public addCustomBehavior(type: string, data: Record<string, any> = {}) {
-    return this.behaviorStack.addCustomEvent(type, data);
+    return path.join(' > ');
   }
 }

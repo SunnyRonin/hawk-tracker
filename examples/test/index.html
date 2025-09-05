@@ -262,6 +262,44 @@
             </div>
 
             <div class="demo-section">
+                <h3>点击事件控制测试</h3>
+                <div style="margin-bottom:10px;">
+                    <button id="enableClickBtn" class="performance-btn">启用点击监控</button>
+                    <button id="disableClickBtn" class="error-btn">禁用点击监控</button>
+                    <button id="clearClickLogBtn" class="resource-btn">清空点击日志</button>
+                    <span id="clickTrackingStatus" style="margin-left:10px;font-weight:bold;color:#28a745;">状态：已启用</span>
+                </div>
+
+                <div style="margin:10px 0;">
+                    <strong>统计：</strong>
+                    <span style="margin-left:10px;">总点击：<span id="totalClicks">0</span></span>
+                    <span style="margin-left:10px;">已监控：<span id="trackedClicks">0</span></span>
+                    <span style="margin-left:10px;">被忽略：<span id="ignoredClicks">0</span></span>
+                </div>
+
+                <div style="margin:10px 0;">
+                    <button class="performance-btn" data-tracking-event-id="btn-1" data-tracking-title="基础按钮1">基础按钮1</button>
+                    <button class="performance-btn" data-tracking-event-id="btn-2" data-tracking-title="基础按钮2">基础按钮2</button>
+                    <button class="resource-btn no-track" data-tracking-event-id="btn-ignored">被忽略的按钮（.no-track）</button>
+                </div>
+
+                <div style="border:1px dashed #ddd;padding:10px;border-radius:6px;">
+                    <div>嵌套元素区域（父层 data-no-track 将忽略子元素）</div>
+                    <div data-no-track style="padding:10px;margin-top:6px;border:1px solid #eee;">
+                        <button class="performance-btn" data-tracking-event-id="nested-ignored">父元素被忽略的按钮</button>
+                    </div>
+                    <div style="padding:10px;margin-top:6px;border:1px solid #eee;">
+                        <button class="performance-btn" data-tracking-event-id="nested-btn" data-tracking-title="嵌套按钮">嵌套按钮</button>
+                    </div>
+                </div>
+
+                <div class="performance-info" style="margin-top:12px;">
+                    <div style="font-weight:bold;margin-bottom:6px;">点击事件日志</div>
+                    <pre id="clickLog" style="max-height:200px;overflow:auto;background:#000;color:#0f0;padding:10px;border-radius:4px;">(空)</pre>
+                </div>
+            </div>
+
+            <div class="demo-section">
                 <h3>控制台输出</h3>
                 <p>打开浏览器控制台查看详细的监控日志和上报数据。</p>
                 <div class="performance-info">
@@ -591,6 +629,115 @@
         console.log('  - window.testPerformance() - 手动测试性能监控');
         console.log('  - window.testError() - 手动测试错误监控');
         console.log('  - window.hawkTracker - 访问 Hawk Tracker 实例');
+
+        // ---------------- 点击事件控制测试逻辑 ----------------
+        (function(){
+            let clickTrackingEnabled = true;
+            const state = { total: 0, tracked: 0, ignored: 0 };
+            const els = {
+                total: document.getElementById('totalClicks'),
+                tracked: document.getElementById('trackedClicks'),
+                ignored: document.getElementById('ignoredClicks'),
+                status: document.getElementById('clickTrackingStatus'),
+                log: document.getElementById('clickLog'),
+                enableBtn: document.getElementById('enableClickBtn'),
+                disableBtn: document.getElementById('disableClickBtn'),
+                clearBtn: document.getElementById('clearClickLogBtn'),
+            };
+
+            function updateStats(){
+                els.total.textContent = String(state.total);
+                els.tracked.textContent = String(state.tracked);
+                els.ignored.textContent = String(state.ignored);
+            }
+
+            function logLine(msg, data){
+                const time = new Date().toLocaleTimeString();
+                if(els.log.textContent === '(空)') els.log.textContent = '';
+                els.log.textContent += `[${time}] ${msg}` + (data ? `\n${JSON.stringify(data, null, 2)}` : '') + '\n\n';
+                els.log.scrollTop = els.log.scrollHeight;
+            }
+
+            function isIgnored(target){
+                if(!target) return false;
+                return !!(target.closest('.no-track') || target.closest('[data-no-track]'));
+            }
+
+            document.addEventListener('click', (e) => {
+                state.total++;
+                const target = e.target;
+                const ignored = isIgnored(target);
+                const hasTrackId = !!(target && target.closest('[data-tracking-event-id]'));
+
+                if(!clickTrackingEnabled){
+                    state.ignored++;
+                    logLine('点击被忽略（全局禁用）', { tag: target && target.tagName, className: target && target.className });
+                    updateStats();
+                    return;
+                }
+
+                if(ignored){
+                    state.ignored++;
+                    logLine('点击被忽略（选择器）', { tag: target && target.tagName, className: target && target.className });
+                } else if(hasTrackId){
+                    state.tracked++;
+                    const el = target.closest('[data-tracking-event-id]');
+                    const payload = {
+                        eventId: el.getAttribute('data-tracking-event-id'),
+                        title: el.getAttribute('data-tracking-title') || undefined,
+                    };
+                    logLine('点击已监控', payload);
+
+                    // 若存在全局 hawkTracker 且有行为栈，可附加自定义事件，方便观察
+                    try {
+                        if(window.hawkTracker && window.hawkTracker.createBehaviorStack){
+                            const stack = window.hawkTracker.getBehaviorStack ? window.hawkTracker.getBehaviorStack('user_behavior') : null;
+                            if(stack && stack.addCustomEvent){
+                                stack.addCustomEvent('click_control_test', payload);
+                            }
+                        }
+                    } catch(_) {}
+                } else {
+                    // 非埋点元素但开启时计入总点击，不计入已监控/被忽略
+                    logLine('普通元素点击', { tag: target && target.tagName, className: target && target.className });
+                }
+
+                updateStats();
+            });
+
+            els.enableBtn.addEventListener('click', () => {
+                clickTrackingEnabled = true;
+                els.status.textContent = '状态：已启用';
+                els.status.style.color = '#28a745';
+                logLine('点击监控已启用');
+                try {
+                    if (window.hawkTracker && window.hawkTracker.enableClickTracking) {
+                        window.hawkTracker.enableClickTracking();
+                    }
+                } catch (_) {}
+            });
+
+            els.disableBtn.addEventListener('click', () => {
+                clickTrackingEnabled = false;
+                els.status.textContent = '状态：已禁用';
+                els.status.style.color = '#dc3545';
+                logLine('点击监控已禁用');
+                try {
+                    if (window.hawkTracker && window.hawkTracker.disableClickTracking) {
+                        window.hawkTracker.disableClickTracking();
+                    }
+                } catch (_) {}
+            });
+
+            els.clearBtn.addEventListener('click', () => {
+                state.total = state.tracked = state.ignored = 0;
+                updateStats();
+                els.log.textContent = '(空)';
+            });
+
+            // 初始化
+            updateStats();
+        })();
     </script>
 </body>
 </html>

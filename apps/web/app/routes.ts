@@ -26,6 +26,14 @@ export default [
       ),
       route('users', 'components/projects/[projectId]/log/users/page.tsx'),
       route('custom', 'components/projects/[projectId]/log/custom/page.tsx'),
+      route(
+        'custom/create',
+        'components/projects/[projectId]/log/custom/create/page.tsx',
+      ),
+      route(
+        'custom/:eventId',
+        'components/projects/[projectId]/log/custom/[eventId]/page.tsx',
+      ),
     ],
   ),
   route(
@@ -38,4 +46,6 @@ export default [
   ),
   route('login', 'routes/login.tsx'),
   route('register', 'routes/register.tsx'),
+  // 通配符路由，捕获所有未匹配的路径
+  route('*', 'routes/not-found.tsx'),
 ] satisfies RouteConfig;

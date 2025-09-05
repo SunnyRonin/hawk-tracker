@@ -19,5 +19,5 @@ export {
   getTimeDifference,
   formatTimeDifference,
   validateBehaviorEvent,
-  filterBehaviorEvents
+  filterBehaviorEvents,
 } from './utils';

@@ -2,7 +2,11 @@ import { InternalConfig } from './types/options';
 import { EventCenter, eventCenter } from './lib/eventCenter';
 import { DataSender } from './lib/dataSender';
 import { BehaviorStackManager } from './lib/behaviorStackManager';
-import { initReplace } from './lib/AOPFactory';
+import {
+  initReplace,
+  enableClickTracking,
+  disableClickTracking,
+} from './lib/AOPFactory';
 import { nativeTryCatch } from './utils/exceptions';
 import { setConfig, getConfig } from './common/config';
 import { initBaseInfo } from './common/base';
@@ -116,6 +120,15 @@ export class HawkTracker {
   public clearBehaviors(stackName: string = 'user_behavior') {
     const stack = this.getOrCreateBehaviorStack(stackName);
     stack.clear();
+  }
+
+  // 运行时控制：启用/禁用点击事件监控
+  public enableClickTracking() {
+    enableClickTracking();
+  }
+
+  public disableClickTracking() {
+    disableClickTracking();
   }
 }
 

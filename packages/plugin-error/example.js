@@ -188,7 +188,6 @@ const ErrorTestVue = {
         throw new Error('异步错误测试: ' + error.message);
       }
     },
-
   },
 };
 
